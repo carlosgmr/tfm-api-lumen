@@ -19,7 +19,7 @@ $router->get('administrator', [
     'as' => 'administrator.listing',
     'uses' => 'AdministratorController@listing'
 ]);
-$router->get('administrator/{id}', [
+$router->get('administrator/{id:[1-9][0-9]*}', [
     'as' => 'administrator.read',
     'uses' => 'AdministratorController@read'
 ]);
@@ -27,11 +27,11 @@ $router->post('administrator', [
     'as' => 'administrator.create',
     'uses' => 'AdministratorController@create'
 ]);
-$router->patch('administrator/{id}', [
+$router->patch('administrator/{id:[1-9][0-9]*}', [
     'as' => 'administrator.update',
     'uses' => 'AdministratorController@update'
 ]);
-$router->delete('administrator/{id}', [
+$router->delete('administrator/{id:[1-9][0-9]*}', [
     'as' => 'administrator.delete',
     'uses' => 'AdministratorController@delete'
 ]);
