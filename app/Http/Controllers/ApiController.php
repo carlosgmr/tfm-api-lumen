@@ -20,24 +20,27 @@ class ApiController extends Controller
 
     /**
      * Nombre de la tabla de base de datos con la que trabaja la clase Controller
-     * 
      * @var string
      */
     protected $table;
 
     /**
      * Nombre de las columnas expuestas por la API en las operaciones listing y read
-     * 
      * @var array
      */
     protected $publicColumns;
 
     /**
-     * Nombre de las columnas que se pueden editar en las operaciones insert y update
-     * 
+     * Reglas de validación de datos de entrada para la operación create
      * @var array
      */
-    protected $editabledColumns;
+    protected $rulesForCreate;
+
+    /**
+     * Reglas de validación de datos de entrada para la operación update
+     * @var array
+     */
+    protected $rulesForUpdate;
 
     /**
      * Devuelve la instancia de la conexión con la base de datos
@@ -56,8 +59,18 @@ class ApiController extends Controller
     }
 
     /**
+     * Aplica un formato personalizado a los datos pasados
+     * Si es necesario debe ser sobreescrito en las clases hijas
+     * @param array $data
+     * @return array
+     */
+    public function formatData($data)
+    {
+        return $data;
+    }
+
+    /**
      * Devuelve todos los elementos disponibles en la entidad
-     * 
      * @return JsonResponse
      */
     public function listing()
@@ -68,7 +81,7 @@ class ApiController extends Controller
     }
 
     /**
-     * 
+     * Lee un recurso concreto de la entidad
      * @param int $id
      * @return JsonResponse
      */
@@ -77,7 +90,7 @@ class ApiController extends Controller
         $result = $this->getPublicData($id);
 
         if (empty($result)) {
-            return response()->json(['error' => 'El recurso solicitado no existe'], 404);
+            return response()->json(['error' => ['El recurso solicitado no existe']], 404);
         }
 
         return response()->json($result, 200);
@@ -85,7 +98,6 @@ class ApiController extends Controller
 
     /**
      * Retorna los datos públicos de un recurso
-     * 
      * @param int $id
      * @return array
      */
@@ -100,36 +112,28 @@ class ApiController extends Controller
     }
 
     /**
-     * Comprueba si el valor pasado existe en la columna de la tabla actual
-     * @param string $column
-     * @param mixed $value
-     * @param int $id
-     * @return bool
-     */
-    protected function isValidUnique($column, $value, $id = null)
-    {
-        $query = "SELECT id".
-                " FROM ".$this->table.
-                " WHERE ".$column." = ?";
-        $bindings = [$value];
-
-        if ($id) {
-            $query .= " AND id <> ?";
-            $bindings[] = $id;
-        }
-
-        $result = $this->getDb()->selectOne($query, $bindings);
-        return $result === null;
-    }
-
-    /**
-     * 
+     * Crea un recurso en la entidad
      * @param Request $request
      * @return JsonResponse
      */
     public function create(Request $request)
     {
-        return response()->json(['error' => 'Método no soportado'], 405);
+        $data = $this->formatData($this->validate($request, $this->rulesForCreate));
+
+        try {
+            if (!$this->createInDb($data)) {
+                throw new \Exception('Los datos no han podido ser creados');
+            }
+
+            $id = $this->getDb()->getPdo()->lastInsertId();
+            $result = $this->getPublicData($id);
+            $code = 201;
+        } catch (\Exception $ex) {
+            $result = ['error' => [$ex->getMessage()]];
+            $code = $code ?? 500;
+        }
+
+        return response()->json($result, $code);
     }
 
     /**
@@ -148,19 +152,41 @@ class ApiController extends Controller
     }
 
     /**
-     * 
+     * Actualiza un recurso en la entidad
      * @param Request $request
      * @param int $id
      * @return JsonResponse
      */
     public function update(Request $request, $id)
     {
-        return response()->json(['error' => 'Método no soportado'], 405);
+        foreach ($this->rulesForUpdate as &$value) {
+            $value = preg_replace('/###ID###/', $id, $value);
+        }
+
+        $data = $this->formatData($this->validate($request, $this->rulesForUpdate));
+
+        try {
+            if (!empty($data)) {
+                $this->updateInDb($id, $data);
+            }
+
+            $result = $this->getPublicData($id);
+            if (empty($result)) {
+                $code = 404;
+                throw  new \Exception('El recurso solicitado no existe');
+            }
+
+            $code = 200;
+        } catch (\Exception $ex) {
+            $result = ['error' => [$ex->getMessage()]];
+            $code = $code ?? 500;
+        }
+
+        return response()->json($result, $code);
     }
 
     /**
      * Actualiza una fila en la tabla actual
-     * 
      * @param int $id
      * @param array $data
      * @return int
@@ -176,7 +202,7 @@ class ApiController extends Controller
     }
 
     /**
-     * 
+     * Elimina un recurso de la entidad
      * @param int $id
      * @return JsonResponse
      */
@@ -186,7 +212,8 @@ class ApiController extends Controller
             $result = $this->getPublicData($id);
 
             if (empty($result)) {
-                throw  new \Exception('El recurso solicitado no existe', 404);
+                $code = 404;
+                throw  new \Exception('El recurso solicitado no existe');
             }
 
             if (!$this->getDb()->delete("DELETE FROM ".$this->table." WHERE id = ?", [$id])) {
@@ -195,7 +222,7 @@ class ApiController extends Controller
 
             $code = 200;
         } catch (\Exception $ex) {
-            $result = ['error' => $ex->getMessage()];
+            $result = ['error' => [$ex->getMessage()]];
             $code = $code ?? 500;
         }
 

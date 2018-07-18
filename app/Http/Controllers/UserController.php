@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-class AdministratorController extends ApiController
+class UserController extends ApiController
 {
     /**
      * Create a new controller instance.
@@ -11,7 +11,7 @@ class AdministratorController extends ApiController
      */
     public function __construct()
     {
-        $this->table = 'administrator';
+        $this->table = 'user';
         $this->publicColumns = [
             'id', 'email', 'name', 'surname_1', 'surname_2', 'created_at', 'updated_at', 'active',
         ];
