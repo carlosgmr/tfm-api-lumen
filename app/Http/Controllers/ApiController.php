@@ -75,8 +75,9 @@ class ApiController extends Controller
      */
     public function listing()
     {
+        array_walk($this->publicColumns, function(&$value, $key) {$value = '`'.$value.'`';});
         $results = $this->getDb()->select("SELECT ".implode(",", $this->publicColumns).
-                " FROM ".$this->table);
+                " FROM `".$this->table."`");
         return response()->json($results, 200);
     }
 
@@ -103,8 +104,9 @@ class ApiController extends Controller
      */
     protected function getPublicData($id)
     {
-        return $this->getDb()->select("SELECT ".implode(",", $this->publicColumns).
-                " FROM ".$this->table.
+        array_walk($this->publicColumns, function(&$value, $key) {$value = '`'.$value.'`';});
+        return $this->getDb()->selectOne("SELECT ".implode(",", $this->publicColumns).
+                " FROM `".$this->table."`".
                 " WHERE id = :id",
                 [
                     'id' => $id,
@@ -144,10 +146,11 @@ class ApiController extends Controller
     protected function createInDb($data)
     {
         $columns = array_keys($data);
+        array_walk($columns, function(&$value, $key) {$value = '`'.$value.'`';});
         $params = array_fill(0, count($data), '?');
         $values = array_values($data);
 
-        return $this->getDb()->insert("INSERT INTO ".$this->table." (".implode(",", $columns).")".
+        return $this->getDb()->insert("INSERT INTO `".$this->table."` (".implode(",", $columns).")".
                 " VALUES (".implode(",", $params).")", $values);
     }
 
@@ -194,11 +197,11 @@ class ApiController extends Controller
     protected function updateInDb($id, $data)
     {
         $columns = array_keys($data);
-        array_walk($columns, function(&$value, $key) {$value .= ' = ?';});
+        array_walk($columns, function(&$value, $key) {$value = '`'.$value.'` = ?';});
         $values = array_values($data);
         $values[] = $id;
 
-        return $this->getDb()->update("UPDATE ".$this->table." SET ".implode(",", $columns)." WHERE id = ?", $values);
+        return $this->getDb()->update("UPDATE `".$this->table."` SET ".implode(",", $columns)." WHERE id = ?", $values);
     }
 
     /**
@@ -216,7 +219,7 @@ class ApiController extends Controller
                 throw  new \Exception('El recurso solicitado no existe');
             }
 
-            if (!$this->getDb()->delete("DELETE FROM ".$this->table." WHERE id = ?", [$id])) {
+            if (!$this->getDb()->delete("DELETE FROM `".$this->table."` WHERE id = ?", [$id])) {
                 throw new \Exception('Los datos no han podido ser eliminados');
             }
 
@@ -227,5 +230,14 @@ class ApiController extends Controller
         }
 
         return response()->json($result, $code);
+    }
+
+    /**
+     * Retorna un json response 405
+     * @return JsonResponse
+     */
+    public function notAllowed()
+    {
+        return response()->json(['error' => ['Método no soportado']], 405);
     }
 }
