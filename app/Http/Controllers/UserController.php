@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
+
 class UserController extends ApiController
 {
     /**
@@ -31,6 +33,18 @@ class UserController extends ApiController
             'surname_2' => 'nullable|min:2|max:64',
             'active' => 'nullable|boolean',
         ];
+
+        $this->relations = [
+            'group' => [
+                'join' => [
+                    'table' => 'user_group',
+                    'publicColumns' => ['added_at'],
+                    'fkColumn' => 'group',
+                    'whereColumn' => 'user',
+                ],
+                'publicColumns' => ['id', 'name', 'description', 'created_at', 'updated_at', 'active'],
+            ]
+        ];
     }
 
     /**
@@ -47,5 +61,15 @@ class UserController extends ApiController
         }
 
         return $data;
+    }
+
+    /**
+     * 
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function listingGroup($id)
+    {
+        return $this->listingRelation($id, 'group');
     }
 }

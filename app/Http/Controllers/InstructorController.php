@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
+
 class InstructorController extends ApiController
 {
     /**
@@ -31,6 +33,18 @@ class InstructorController extends ApiController
             'surname_2' => 'nullable|min:2|max:64',
             'active' => 'nullable|boolean',
         ];
+
+        $this->relations = [
+            'group' => [
+                'join' => [
+                    'table' => 'instructor_group',
+                    'publicColumns' => ['added_at'],
+                    'fkColumn' => 'group',
+                    'whereColumn' => 'instructor',
+                ],
+                'publicColumns' => ['id', 'name', 'description', 'created_at', 'updated_at', 'active'],
+            ]
+        ];
     }
 
     /**
@@ -47,5 +61,15 @@ class InstructorController extends ApiController
         }
 
         return $data;
+    }
+
+    /**
+     * 
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function listingGroup($id)
+    {
+        return $this->listingRelation($id, 'group');
     }
 }

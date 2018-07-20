@@ -43,6 +43,12 @@ class ApiController extends Controller
     protected $rulesForUpdate;
 
     /**
+     * Configuración de las relaciones con otros tablas
+     * @var array
+     */
+    protected $relations;
+
+    /**
      * Devuelve la instancia de la conexión con la base de datos
      * @return \Illuminate\Database\Connection
      */
@@ -78,6 +84,32 @@ class ApiController extends Controller
         array_walk($this->publicColumns, function(&$value, $key) {$value = '`'.$value.'`';});
         $results = $this->getDb()->select("SELECT ".implode(",", $this->publicColumns).
                 " FROM `".$this->table."`");
+        return response()->json($results, 200);
+    }
+
+    /**
+     * Devuelve todos los elementos disponibles en la entidad relacionada
+     * @param int $id
+     * @param string $relationTable
+     * @return JsonResponse
+     */
+    protected function listingRelation($id, $relationTable)
+    {
+        $config = $this->relations[$relationTable];
+
+        $colsT1 = $config['publicColumns'];
+        array_walk($colsT1, function(&$value, $key) {$value = 'T1.`'.$value.'`';});
+        $colsT2 = $config['join']['publicColumns'];
+        array_walk($colsT2, function(&$value, $key) {$value = 'T2.`'.$value.'`';});
+
+        $query = "SELECT ".implode(",", $colsT1).(!empty($colsT2) ? ",".implode(",", $colsT2) : "")." ".
+                "FROM ".
+                    "`".$relationTable."` AS T1 ".
+                    "INNER JOIN `".$config['join']['table']."` AS T2 ".
+                    "ON T2.`".$config['join']['fkColumn']."` = T1.`id` ".
+                "WHERE T2.`".$config['join']['whereColumn']."` = ?";
+        $results = $this->getDb()->select($query, [$id]);
+
         return response()->json($results, 200);
     }
 

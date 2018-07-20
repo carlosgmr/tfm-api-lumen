@@ -58,6 +58,10 @@ $router->delete('instructor/{id:[1-9][0-9]*}', [
     'as' => 'instructor.delete',
     'uses' => 'InstructorController@delete'
 ]);
+$router->get('instructor/{id:[1-9][0-9]*}/group', [
+    'as' => 'instructor.listing.group',
+    'uses' => 'InstructorController@listingGroup'
+]);
 
 // USER
 $router->get('user', [
@@ -80,6 +84,10 @@ $router->delete('user/{id:[1-9][0-9]*}', [
     'as' => 'user.delete',
     'uses' => 'UserController@delete'
 ]);
+$router->get('user/{id:[1-9][0-9]*}/group', [
+    'as' => 'user.listing.group',
+    'uses' => 'UserController@listingGroup'
+]);
 
 // GROUP
 $router->get('group', [
@@ -101,6 +109,14 @@ $router->patch('group/{id:[1-9][0-9]*}', [
 $router->delete('group/{id:[1-9][0-9]*}', [
     'as' => 'group.delete',
     'uses' => 'GroupController@delete'
+]);
+$router->get('group/{id:[1-9][0-9]*}/instructor', [
+    'as' => 'group.listing.instructor',
+    'uses' => 'GroupController@listingInstructor'
+]);
+$router->get('group/{id:[1-9][0-9]*}/user', [
+    'as' => 'group.listing.user',
+    'uses' => 'GroupController@listingUser'
 ]);
 
 // QUESTIONARY MODEL
