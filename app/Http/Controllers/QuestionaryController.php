@@ -15,6 +15,12 @@ class QuestionaryController extends ApiController
         $this->publicColumns = [
             'id', 'group', 'title', 'description', 'model', 'created_at', 'updated_at', 'public', 'active'
         ];
+        $this->rulesForListing = [
+            'group' => 'nullable|exists:group,id',
+            'model' => 'nullable|exists:questionary_model,id',
+            'public' => 'nullable|boolean',
+            'active' => 'nullable|boolean',
+        ];
         $this->rulesForCreate = [
             'group' => 'required|exists:group,id',
             'title' => 'required|min:2|max:256',

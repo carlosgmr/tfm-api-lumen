@@ -31,6 +31,12 @@ class ApiController extends Controller
     protected $publicColumns;
 
     /**
+     * Reglas de validación de datos de entrada para la operación listing
+     * @var array
+     */
+    protected $rulesForListing;
+
+    /**
      * Reglas de validación de datos de entrada para la operación create
      * @var array
      */
@@ -79,11 +85,35 @@ class ApiController extends Controller
      * Devuelve todos los elementos disponibles en la entidad
      * @return JsonResponse
      */
-    public function listing()
+    public function listing(Request $request)
     {
+        if (!empty($this->rulesForListing)) {
+            $data = $this->validate($request, $this->rulesForListing);
+        } else {
+            $data = [];
+        }
+
         array_walk($this->publicColumns, function(&$value, $key) {$value = '`'.$value.'`';});
-        $results = $this->getDb()->select("SELECT ".implode(",", $this->publicColumns).
-                " FROM `".$this->table."`");
+        $query = "SELECT ".implode(",", $this->publicColumns).
+                " FROM `".$this->table."`";
+
+        $where = "";
+        $bindings = [];
+        foreach ($data as $col => $value)
+        {
+            if (!empty($where)) {
+                $where .= " AND ";
+            }
+
+            $where .= "`".$col."` = ?";
+            $bindings[] = $value;
+        }
+
+        if (!empty($where)) {
+            $query .= " WHERE ".$where;
+        }
+
+        $results = $this->getDb()->select($query, $bindings);
         return response()->json($results, 200);
     }
 
@@ -91,9 +121,10 @@ class ApiController extends Controller
      * Devuelve todos los elementos disponibles en la entidad relacionada
      * @param int $id
      * @param string $relationTable
-     * @return JsonResponse
+     * @param bool $onlyData
+     * @return JsonResponse|array
      */
-    protected function listingRelation($id, $relationTable)
+    protected function listingRelation($id, $relationTable, $onlyData = false)
     {
         $config = $this->relations[$relationTable];
 
@@ -110,7 +141,7 @@ class ApiController extends Controller
                 "WHERE T2.`".$config['join']['whereColumn']."` = ?";
         $results = $this->getDb()->select($query, [$id]);
 
-        return response()->json($results, 200);
+        return !$onlyData ? response()->json($results, 200) : $results;
     }
 
     /**
@@ -271,5 +302,28 @@ class ApiController extends Controller
     public function notAllowed()
     {
         return response()->json(['error' => ['Método no soportado']], 405);
+    }
+
+    /**
+     * Valida si un array contiene un listado de ids válidos
+     * @param array $ids
+     * @param string $table
+     * @throws \Exception
+     */
+    protected function validateIds($ids, $table)
+    {
+        $i = 1;
+        foreach ($ids as $id) {
+            if (!is_int($id)) {
+                throw new \Exception('El elemento nº '.$i.' del array enviado no es un entero');
+            }
+            if ($id <= 0) {
+                throw new \Exception('El elemento nº '.$i.' del array no es mayor o igual a 1');
+            }
+            if (!$this->getDb()->selectOne("SELECT `id` FROM `".$table."` WHERE `id` = ?", [$id])) {
+                throw new \Exception('El elemento nº '.$i.' del array no es un id válido');
+            }
+            $i++;
+        }
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class InstructorController extends ApiController
 {
@@ -71,5 +72,56 @@ class InstructorController extends ApiController
     public function listingGroup($id)
     {
         return $this->listingRelation($id, 'group');
+    }
+
+    /**
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function currentGroup(Request $request, $id)
+    {
+        $data = $this->validate($request, [
+            'group' => 'present|array|max:100'
+        ]);
+
+        try {
+            $this->validateIds($data['group'], 'group');
+
+            // obtenemos el estado actual de la tabla
+            $currentState = $this->getDb()->select("SELECT `id`, `group` "
+                    . "FROM `instructor_group` "
+                    . "WHERE `instructor` = ?", [$id]);
+            $currentIds = [];
+
+            // realizamos en BD las operaciones de eliminación e insercción necesarias
+            foreach ($currentState as $current) {
+                $currentIds[] = $current->group;
+                if (!in_array($current->group, $data['group'])) {
+                    $this->getDb()->delete("DELETE "
+                            . "FROM `instructor_group` "
+                            . "WHERE `id` = ?", [$current->id]);
+                }
+            }
+
+            foreach ($data['group'] as $value) {
+                if (!in_array($value, $currentIds)) {
+                    $this->getDb()->insert("INSERT "
+                            . "INTO `instructor_group`(`instructor`, `group`) "
+                            . "VALUES (?, ?)", [$id, $value]);
+                }
+            }
+
+            // devolvemos el estado actual
+            $result = $this->listingRelation($id, 'group', true);
+            $code = 200;
+
+        } catch (\Exception $ex) {
+            $result = ['error' => [$ex->getMessage()]];
+            $code = $code ?? 500;
+        }
+
+        return response()->json($result, $code);
     }
 }

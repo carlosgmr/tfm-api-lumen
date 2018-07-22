@@ -17,6 +17,12 @@ class RegistryController extends ApiController
         $this->publicColumns = [
             'id', 'user', 'questionary', 'question', 'answer', 'created_at'
         ];
+        $this->rulesForListing = [
+            'user' => 'nullable|exists:user,id',
+            'questionary' => 'nullable|exists:questionary,id',
+            'question' => 'nullable|exists:question,id',
+            'answer' => 'nullable|exists:answer,id',
+        ];
         $this->rulesForCreate = [
             'user' => 'nullable|exists:user,id',
             'questionary' => 'required|exists:questionary,id',

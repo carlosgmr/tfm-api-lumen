@@ -62,6 +62,10 @@ $router->get('instructor/{id:[1-9][0-9]*}/group', [
     'as' => 'instructor.listing.group',
     'uses' => 'InstructorController@listingGroup'
 ]);
+$router->post('instructor/{id:[1-9][0-9]*}/group', [
+    'as' => 'instructor.current.group',
+    'uses' => 'InstructorController@currentGroup'
+]);
 
 // USER
 $router->get('user', [
@@ -87,6 +91,10 @@ $router->delete('user/{id:[1-9][0-9]*}', [
 $router->get('user/{id:[1-9][0-9]*}/group', [
     'as' => 'user.listing.group',
     'uses' => 'UserController@listingGroup'
+]);
+$router->post('user/{id:[1-9][0-9]*}/group', [
+    'as' => 'user.current.group',
+    'uses' => 'UserController@currentGroup'
 ]);
 
 // GROUP
@@ -114,9 +122,17 @@ $router->get('group/{id:[1-9][0-9]*}/instructor', [
     'as' => 'group.listing.instructor',
     'uses' => 'GroupController@listingInstructor'
 ]);
+$router->post('group/{id:[1-9][0-9]*}/instructor', [
+    'as' => 'group.current.instructor',
+    'uses' => 'GroupController@currentInstructor'
+]);
 $router->get('group/{id:[1-9][0-9]*}/user', [
     'as' => 'group.listing.user',
     'uses' => 'GroupController@listingUser'
+]);
+$router->post('group/{id:[1-9][0-9]*}/user', [
+    'as' => 'group.current.user',
+    'uses' => 'GroupController@currentUser'
 ]);
 
 // QUESTIONARY MODEL

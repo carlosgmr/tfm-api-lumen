@@ -15,6 +15,9 @@ class AnswerController extends ApiController
         $this->publicColumns = [
             'id', 'question', 'statement', 'correct'
         ];
+        $this->rulesForListing = [
+            'question' => 'nullable|exists:question,id',
+        ];
         $this->rulesForCreate = [
             'question' => 'required|exists:question,id',
             'statement' => 'required|min:2|max:65535',
