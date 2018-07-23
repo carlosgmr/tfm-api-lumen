@@ -12,6 +12,10 @@ use Illuminate\Http\Request;
  */
 class ApiController extends Controller
 {
+    const ROLE_ADMINISTRATOR = 'administrator';
+    const ROLE_INSTRUCTOR = 'instructor';
+    const ROLE_USER = 'user';
+
     /**
      * Conexión con la base de datos
      * @var \Illuminate\Database\Connection
@@ -82,11 +86,40 @@ class ApiController extends Controller
     }
 
     /**
+     * Comprueba si el request actual tiene permisos para acceder al recurso
+     * de acuerdo a las credenciales asociades al token
+     * Se debe implementar en cada clase Controller
+     * @param Request $request
+     * @param int $id
+     * @return bool
+     */
+    public function checkAcl(Request $request, $id = null)
+    {
+        return true;
+    }
+
+    /**
+     * Retorna el alias de la ruta actual
+     * @todo Corregir la forma de obtener la ruta
+     * @param Request $request
+     * @return string
+     */
+    public function getRouteName(Request $request)
+    {
+        $route = $request->route();
+        return $route[1]['as'];
+    }
+
+    /**
      * Devuelve todos los elementos disponibles en la entidad
      * @return JsonResponse
      */
     public function listing(Request $request)
     {
+        if (!$this->checkAcl($request)) {
+            return $this->unauthorized();
+        }
+
         if (!empty($this->rulesForListing)) {
             $data = $this->validate($request, $this->rulesForListing);
         } else {
@@ -146,11 +179,16 @@ class ApiController extends Controller
 
     /**
      * Lee un recurso concreto de la entidad
+     * @param Request $request
      * @param int $id
      * @return JsonResponse
      */
-    public function read($id)
+    public function read(Request $request, $id)
     {
+        if (!$this->checkAcl($request, $id)) {
+            return $this->unauthorized();
+        }
+
         $result = $this->getPublicData($id);
 
         if (empty($result)) {
@@ -183,6 +221,10 @@ class ApiController extends Controller
      */
     public function create(Request $request)
     {
+        if (!$this->checkAcl($request)) {
+            return $this->unauthorized();
+        }
+
         $data = $this->formatData($this->validate($request, $this->rulesForCreate));
 
         try {
@@ -225,6 +267,10 @@ class ApiController extends Controller
      */
     public function update(Request $request, $id)
     {
+        if (!$this->checkAcl($request, $id)) {
+            return $this->unauthorized();
+        }
+
         foreach ($this->rulesForUpdate as &$value) {
             $value = preg_replace('/###ID###/', $id, $value);
         }
@@ -269,11 +315,16 @@ class ApiController extends Controller
 
     /**
      * Elimina un recurso de la entidad
+     * @param Request $request
      * @param int $id
      * @return JsonResponse
      */
-    public function delete($id)
+    public function delete(Request $request, $id)
     {
+        if (!$this->checkAcl($request, $id)) {
+            return $this->unauthorized();
+        }
+
         try {
             $result = $this->getPublicData($id);
 
@@ -302,6 +353,15 @@ class ApiController extends Controller
     public function notAllowed()
     {
         return response()->json(['error' => ['Método no soportado']], 405);
+    }
+
+    /**
+     * Retorna un json response 401
+     * @return JsonResponse
+     */
+    public function unauthorized()
+    {
+        return response()->json(['error' => ['Acceso no autorizado']], 401);
     }
 
     /**

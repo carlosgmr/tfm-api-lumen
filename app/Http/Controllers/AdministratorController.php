@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
+
 class AdministratorController extends ApiController
 {
     /**
@@ -47,5 +49,31 @@ class AdministratorController extends ApiController
         }
 
         return $data;
+    }
+
+    /**
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return bool
+     */
+    public function checkAcl(Request $request, $id = null)
+    {
+        switch ($this->getRouteName($request)) {
+            case 'administrator.listing':
+            case 'administrator.read':
+            case 'administrator.create':
+            case 'administrator.update':
+            case 'administrator.delete':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR])) {
+                    return false;
+                }
+                break;
+
+            default:
+                return false;
+        }
+
+        return true;
     }
 }

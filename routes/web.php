@@ -15,6 +15,12 @@ $router->get('/', function () use ($router) {
     return $router->app->version();
 });
 
+// AUTH
+$router->post('auth/login', [
+    'as' => 'auth.login',
+    'uses' => 'AuthController@authenticate'
+]);
+
 // ADMINISTRATOR
 $router->get('administrator', [
     'as' => 'administrator.listing',
