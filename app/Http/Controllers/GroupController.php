@@ -53,6 +53,40 @@ class GroupController extends ApiController
 
     /**
      * 
+     * @param Request $request
+     * @param int $id
+     * @return bool
+     */
+    public function checkAcl(Request $request, $id = null)
+    {
+        switch ($this->getRouteName($request)) {
+            case 'group.listing':
+            case 'group.read':
+            case 'group.listing.instructor':
+            case 'group.listing.user':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR, self::ROLE_INSTRUCTOR, self::ROLE_USER])) {
+                    return false;
+                }
+                break;
+            case 'group.create':
+            case 'group.update':
+            case 'group.delete':
+            case 'group.current.instructor':
+            case 'group.current.user':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR])) {
+                    return false;
+                }
+                break;
+
+            default:
+                return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * 
      * @param int $id
      * @return JsonResponse
      */

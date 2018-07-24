@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
+
 class AnswerController extends ApiController
 {
     /**
@@ -27,5 +29,35 @@ class AnswerController extends ApiController
             'statement' => 'nullable|min:2|max:65535',
             'correct' => 'nullable|boolean',
         ];
+    }
+
+    /**
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return bool
+     */
+    public function checkAcl(Request $request, $id = null)
+    {
+        switch ($this->getRouteName($request)) {
+            case 'answer.listing':
+            case 'answer.read':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR, self::ROLE_INSTRUCTOR, self::ROLE_USER])) {
+                    return false;
+                }
+                break;
+            case 'answer.create':
+            case 'answer.update':
+            case 'answer.delete':
+                if (!in_array($request->appUser->role, [self::ROLE_INSTRUCTOR])) {
+                    return false;
+                }
+                break;
+
+            default:
+                return false;
+        }
+
+        return true;
     }
 }

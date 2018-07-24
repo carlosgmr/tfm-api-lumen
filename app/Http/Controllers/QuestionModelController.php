@@ -29,6 +29,36 @@ class QuestionModelController extends ApiController
         ];
     }
 
+    /**
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return bool
+     */
+    public function checkAcl(Request $request, $id = null)
+    {
+        switch ($this->getRouteName($request)) {
+            case 'questionModel.listing':
+            case 'questionModel.read':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR, self::ROLE_INSTRUCTOR, self::ROLE_USER])) {
+                    return false;
+                }
+                break;
+            case 'questionModel.create':
+            case 'questionModel.update':
+            case 'questionModel.delete':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR])) {
+                    return false;
+                }
+                break;
+
+            default:
+                return false;
+        }
+
+        return true;
+    }
+
     public function create(Request $request)
     {
         return $this->notAllowed();

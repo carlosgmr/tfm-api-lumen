@@ -32,6 +32,37 @@ class RegistryController extends ApiController
         $this->rulesForUpdate = [];
     }
 
+    /**
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return bool
+     */
+    public function checkAcl(Request $request, $id = null)
+    {
+        switch ($this->getRouteName($request)) {
+            case 'registry.listing':
+            case 'registry.read':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR, self::ROLE_INSTRUCTOR])) {
+                    return false;
+                }
+                break;
+            case 'registry.create':
+                if (!in_array($request->appUser->role, [self::ROLE_USER])) {
+                    return false;
+                }
+                break;
+            case 'registry.update':
+            case 'registry.delete':
+                break;
+
+            default:
+                return false;
+        }
+
+        return true;
+    }
+
     public function delete($id)
     {
         return $this->notAllowed();

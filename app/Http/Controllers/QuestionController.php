@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
+
 class QuestionController extends ApiController
 {
     /**
@@ -32,5 +34,35 @@ class QuestionController extends ApiController
             'sort' => 'nullable|integer|min:1|max:9999999999',
             'active' => 'nullable|boolean',
         ];
+    }
+
+    /**
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return bool
+     */
+    public function checkAcl(Request $request, $id = null)
+    {
+        switch ($this->getRouteName($request)) {
+            case 'question.listing':
+            case 'question.read':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR, self::ROLE_INSTRUCTOR, self::ROLE_USER])) {
+                    return false;
+                }
+                break;
+            case 'question.create':
+            case 'question.update':
+            case 'question.delete':
+                if (!in_array($request->appUser->role, [self::ROLE_INSTRUCTOR])) {
+                    return false;
+                }
+                break;
+
+            default:
+                return false;
+        }
+
+        return true;
     }
 }

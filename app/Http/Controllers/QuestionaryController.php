@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
+
 class QuestionaryController extends ApiController
 {
     /**
@@ -35,5 +37,35 @@ class QuestionaryController extends ApiController
             'public' => 'nullable|boolean',
             'active' => 'nullable|boolean',
         ];
+    }
+
+    /**
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return bool
+     */
+    public function checkAcl(Request $request, $id = null)
+    {
+        switch ($this->getRouteName($request)) {
+            case 'questionary.listing':
+            case 'questionary.read':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR, self::ROLE_INSTRUCTOR, self::ROLE_USER])) {
+                    return false;
+                }
+                break;
+            case 'questionary.create':
+            case 'questionary.update':
+            case 'questionary.delete':
+                if (!in_array($request->appUser->role, [self::ROLE_INSTRUCTOR])) {
+                    return false;
+                }
+                break;
+
+            default:
+                return false;
+        }
+
+        return true;
     }
 }

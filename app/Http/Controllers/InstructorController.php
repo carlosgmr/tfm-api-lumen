@@ -66,6 +66,45 @@ class InstructorController extends ApiController
 
     /**
      * 
+     * @param Request $request
+     * @param int $id
+     * @return bool
+     */
+    public function checkAcl(Request $request, $id = null)
+    {
+        switch ($this->getRouteName($request)) {
+            case 'instructor.read':
+            case 'instructor.listing':
+            case 'instructor.listing.group':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR, self::ROLE_INSTRUCTOR, self::ROLE_USER])) {
+                    return false;
+                }
+                break;
+            case 'instructor.update':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR, self::ROLE_INSTRUCTOR])) {
+                    return false;
+                }
+                if ($request->appUser->role == self::ROLE_INSTRUCTOR && $request->appUser->id != $id) {
+                    return false;
+                }
+                break;
+            case 'instructor.create':
+            case 'instructor.delete':
+            case 'instructor.current.group':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR])) {
+                    return false;
+                }
+                break;
+
+            default:
+                return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * 
      * @param int $id
      * @return JsonResponse
      */

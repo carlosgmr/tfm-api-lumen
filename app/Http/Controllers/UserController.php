@@ -66,6 +66,45 @@ class UserController extends ApiController
 
     /**
      * 
+     * @param Request $request
+     * @param int $id
+     * @return bool
+     */
+    public function checkAcl(Request $request, $id = null)
+    {
+        switch ($this->getRouteName($request)) {
+            case 'user.read':
+            case 'user.listing':
+            case 'user.listing.group':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR, self::ROLE_INSTRUCTOR, self::ROLE_USER])) {
+                    return false;
+                }
+                break;
+            case 'user.update':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR, self::ROLE_USER])) {
+                    return false;
+                }
+                if ($request->appUser->role == self::ROLE_USER && $request->appUser->id != $id) {
+                    return false;
+                }
+                break;
+            case 'user.create':
+            case 'user.delete':
+            case 'user.current.group':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR])) {
+                    return false;
+                }
+                break;
+
+            default:
+                return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * 
      * @param int $id
      * @return JsonResponse
      */
