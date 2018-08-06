@@ -30,7 +30,7 @@ class AuthController extends ApiController
         ]);
 
         $appUser = $this->getDb()->selectOne("SELECT "
-                . "`id`, `email`, `password`, `name`, `surname_1`, `surname_2`, `active` "
+                . "`id`, `email`, `password`, `name`, `surname_1`, `surname_2`, `created_at`, `updated_at`, `active` "
                 . "FROM `".$data['role']."` "
                 . "WHERE `email` = ?", [$data['email']]);
 
@@ -48,18 +48,28 @@ class AuthController extends ApiController
             return response()->json(['error' => ['Las credenciales no son válidas']], 400);
         }
 
+        // datos usuario
+        $user = [
+            'role' => $data['role'],
+            'id' => $appUser->id,
+            'email' => $appUser->email,
+            'fullname' => trim($appUser->name.' '.$appUser->surname_1.' '.$appUser->surname_2),
+            'created_at' => $appUser->created_at,
+            'updated_at' => $appUser->updated_at,
+        ];
+
         // generamos token
         $payload = [
             'iss' => env('JWT_ISSUER'),
             'iat' => time(),
-            'data' => [
-                'role' => $data['role'],
-                'id' => $appUser->id,
-                'email' => $appUser->email,
-                'fullname' => trim($appUser->name.' '.$appUser->surname_1.' '.$appUser->surname_2),
-            ],
+            'data' => $user,
         ];
         $token = JWT::encode($payload, env('JWT_SECRET'));
-        return response()->json(['token' => $token], 200);
+
+        $response = [
+            'user' => $user,
+            'token' => $token,
+        ];
+        return response()->json($response, 200);
     }
 }
