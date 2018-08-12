@@ -63,7 +63,7 @@ class RegistryController extends ApiController
         return true;
     }
 
-    public function delete($id)
+    public function delete(Request $request, $id)
     {
         return $this->notAllowed();
     }

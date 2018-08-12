@@ -64,7 +64,7 @@ class QuestionModelController extends ApiController
         return $this->notAllowed();
     }
 
-    public function delete($id)
+    public function delete(Request $request, $id)
     {
         return $this->notAllowed();
     }

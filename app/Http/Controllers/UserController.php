@@ -95,7 +95,14 @@ class UserController extends ApiController
                     return false;
                 }
                 break;
-
+            case 'user.listing.questionnairesMade':
+                if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR, self::ROLE_INSTRUCTOR, self::ROLE_USER])) {
+                    return false;
+                }
+                if ($request->appUser->role == self::ROLE_USER && $request->appUser->id != $id) {
+                    return false;
+                }
+                break;
             default:
                 return false;
         }
@@ -162,5 +169,50 @@ class UserController extends ApiController
         }
 
         return response()->json($result, $code);
+    }
+
+    /**
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function questionnairesMade(Request $request, $id)
+    {
+        if (!$this->checkAcl($request)) {
+            return $this->unauthorized();
+        }
+
+        $query = "SELECT ".
+                "r.`questionary` AS `questionary_id`,".
+                "q.`group` AS `group_id`,".
+                "q.`title` AS `questionary_title`,".
+                "g.`name` AS `group_name` ".
+            "FROM ".
+                "`registry` AS r ".
+                "INNER JOIN `questionary` AS q ON r.`questionary` = q.`id` ".
+                "INNER JOIN `group` AS g ON q.`group` = g.`id` ".
+            "WHERE ".
+                "r.`user` = ? ".
+            "GROUP BY ".
+                "r.`questionary` ".
+            "ORDER BY q.`group`, r.`questionary`";
+        $bindings = [$id];
+        $results = [];
+
+        $questionarys = $this->getDb()->select($query, $bindings);
+
+        foreach ($questionarys as $questionary) {
+            $results[] = [
+                'id' => $questionary->questionary_id,
+                'title' => $questionary->questionary_title,
+                'group' => [
+                    'id' => $questionary->group_id,
+                    'name' => $questionary->group_name,
+                ],
+            ];
+        }
+        
+        return response()->json($results, 200);
     }
 }

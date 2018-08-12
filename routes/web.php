@@ -102,6 +102,10 @@ $router->post('user/{id:[1-9][0-9]*}/group', [
     'as' => 'user.current.group',
     'uses' => 'UserController@currentGroup'
 ]);
+$router->get('user/{id:[1-9][0-9]*}/group/questionary', [
+    'as' => 'user.listing.questionnairesMade',
+    'uses' => 'UserController@questionnairesMade'
+]);
 
 // GROUP
 $router->get('group', [
