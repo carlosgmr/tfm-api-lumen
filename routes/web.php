@@ -214,6 +214,10 @@ $router->delete('questionary/{id:[1-9][0-9]*}', [
     'as' => 'questionary.delete',
     'uses' => 'QuestionaryController@delete'
 ]);
+$router->get('questionary/{id:[1-9][0-9]*}/complete', [
+    'as' => 'questionary.readComplete',
+    'uses' => 'QuestionaryController@readComplete'
+]);
 
 // QUESTION
 $router->get('question', [
