@@ -81,6 +81,7 @@ class InstructorController extends ApiController
                 }
                 break;
             case 'instructor.update':
+            case 'instructor.listing.questionary':
                 if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR, self::ROLE_INSTRUCTOR])) {
                     return false;
                 }
@@ -162,5 +163,70 @@ class InstructorController extends ApiController
         }
 
         return response()->json($result, $code);
+    }
+
+    /**
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function listingQuestionary(Request $request, $id)
+    {
+        if (!$this->checkAcl($request, $id)) {
+            return $this->unauthorized();
+        }
+
+        $query = 'SELECT '.
+                'q.`id` AS `questionary_id`,'.
+                'q.`title` AS `questionary_title`,'.
+                'q.`description` AS `questionary_description`,'.
+                'q.`created_at` AS `questionary_created_at`,'.
+                'q.`updated_at` AS `questionary_updated_at`,'.
+                'q.`public` AS `questionary_public`,'.
+                'q.`active` AS `questionary_active`,'.
+                'qm.`id` AS `questionary_model_id`,'.
+                'qm.`name` AS `questionary_model_name`,'.
+                'g.`id` AS `group_id`,'.
+                'g.`name` AS `group_name` '.
+            'FROM '.
+                '`questionary` AS q '.
+                'INNER JOIN `group` AS g ON q.`group` = g.`id` '.
+                'INNER JOIN `questionary_model` AS qm ON q.`model` = qm.`id` '.
+            'WHERE '.
+                'q.`group` IN ('.
+                    'SELECT g.`id` '.
+                    'FROM `instructor_group` AS ig INNER JOIN `group` AS g ON ig.`group` = g.`id` '.
+                    'WHERE ig.`instructor` = ? '.
+                ') '.
+            'ORDER BY '.
+                'q.`group`,'.
+                'q.`id`';
+
+        $bindings = [$id];
+        $results = [];
+        $items = $this->getDb()->select($query, $bindings);
+
+        foreach ($items as $item) {
+            $results[] = [
+                'id' => $item->questionary_id,
+                'title' => $item->questionary_title,
+                'description' => $item->questionary_description,
+                'created_at' => $item->questionary_created_at,
+                'updated_at' => $item->questionary_updated_at,
+                'public' => $item->questionary_public,
+                'active' => $item->questionary_active,
+                'model' => [
+                    'id' => $item->questionary_model_id,
+                    'name' => $item->questionary_model_name,
+                ],
+                'group' => [
+                    'id' => $item->group_id,
+                    'name' => $item->group_name,
+                ],
+            ];
+        }
+
+        return response()->json($results, 200);
     }
 }

@@ -72,6 +72,10 @@ $router->post('instructor/{id:[1-9][0-9]*}/group', [
     'as' => 'instructor.current.group',
     'uses' => 'InstructorController@currentGroup'
 ]);
+$router->get('instructor/{id:[1-9][0-9]*}/questionary', [
+    'as' => 'instructor.listing.questionary',
+    'uses' => 'InstructorController@listingQuestionary'
+]);
 
 // USER
 $router->get('user', [

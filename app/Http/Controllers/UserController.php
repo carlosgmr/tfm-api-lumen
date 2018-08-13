@@ -179,7 +179,7 @@ class UserController extends ApiController
      */
     public function questionnairesMade(Request $request, $id)
     {
-        if (!$this->checkAcl($request)) {
+        if (!$this->checkAcl($request, $id)) {
             return $this->unauthorized();
         }
 
