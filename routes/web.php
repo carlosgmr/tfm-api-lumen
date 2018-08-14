@@ -222,6 +222,10 @@ $router->get('questionary/{id:[1-9][0-9]*}/complete', [
     'as' => 'questionary.readComplete',
     'uses' => 'QuestionaryController@readComplete'
 ]);
+$router->post('questionary/{id:[1-9][0-9]*}/add-questions', [
+    'as' => 'questionary.addQuestions',
+    'uses' => 'QuestionaryController@addQuestions'
+]);
 
 // QUESTION
 $router->get('question', [

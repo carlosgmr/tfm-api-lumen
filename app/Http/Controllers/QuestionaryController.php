@@ -58,6 +58,7 @@ class QuestionaryController extends ApiController
             case 'questionary.update':
             case 'questionary.delete':
             case 'questionary.readComplete':
+            case 'questionary.addQuestions':
                 if (!in_array($request->appUser->role, [self::ROLE_INSTRUCTOR])) {
                     return false;
                 }
@@ -176,5 +177,83 @@ class QuestionaryController extends ApiController
         $result['users'] = $this->getDb()->select($queryUsers, [$id]);
 
         return response()->json($result, 200);
+    }
+
+    public function addQuestions(Request $request, $id)
+    {
+        if (!$this->checkAcl($request, $id)) {
+            return $this->unauthorized();
+        }
+
+        $result = [];
+        $data = $this->validate($request, [
+            'questions' => 'required|array|min:1'
+        ]);
+        $questions = $data['questions'];
+        $errors = $this->validateQuestions($questions);
+
+        if (!empty($errors)) {
+            return response()->json(['questions' => $errors], 422);
+        }
+
+        return response()->json($result, 201);
+    }
+
+    private function validateQuestions(array $questions)
+    {
+        $errors = [];
+
+        foreach ($questions as $i => $q) {
+            if (!isset($q['statement']) || (isset($q['statement']) && empty($q['statement']))) {
+                $errors[] = 'Error en pregunta #'.($i+1).': el enunciado es obligatorio';
+            }
+
+            if (!isset($q['model']) || (isset($q['model']) && !($q['model'] > 0))) {
+                $errors[] = 'Error en pregunta #'.($i+1).': el tipo no es válido';
+            }
+
+            if (!isset($q['sort']) || (isset($q['sort']) && !($q['sort'] > 0))) {
+                $errors[] = 'Error en pregunta #'.($i+1).': el orden no es válido';
+            }
+
+            if (!isset($q['answers']) || (isset($q['answers']) && !is_array($q['answers']))) {
+                $errors[] = 'Error en pregunta #'.($i+1).': el formato de las respuestas no es válido';
+            }
+
+            if (isset($q['answers']) && is_array($q['answers'])) {
+                if (count($q['answers']) === 0) {
+                    $errors[] = 'Error en pregunta #'.($i+1).': debe indicar como mínimo 2 respuestas';
+                }
+
+                if (count($q['answers']) > 4) {
+                    $errors[] = 'Error en pregunta #'.($i+1).': debe indicar como máximo 4 respuestas';
+                }
+
+                $numCorrectAnswers = 0;
+                foreach ($q['answers'] as $j => $a) {
+                    if (!isset($a['statement']) || (isset($a['statement']) && empty($a['statement']))) {
+                        $errors[] = 'Error en pregunta #'.($i+1).', respuesta #'.($j+1).': el texto es obligatorio';
+                    }
+
+                    if (!isset($a['correct']) || (isset($a['correct']) && !in_array($a['correct'], [0, 1]))) {
+                        $errors[] = 'Error en pregunta #'.($i+1).', respuesta #'.($j+1).': la respuesta correcta no es válida';
+                    }
+
+                    if (isset($a['correct']) && $a['correct'] === 1) {
+                        $numCorrectAnswers++;
+                    }
+                }
+
+                if ($numCorrectAnswers === 0) {
+                    $errors[] = 'Error en pregunta #'.($i+1).': no se ha indicado ninguna respuesta correcta';
+                }
+
+                if ($numCorrectAnswers > 1) {
+                    $errors[] = 'Error en pregunta #'.($i+1).': se ha indicado más de 1 respuesta correcta';
+                }
+            }
+        }
+
+        return $errors;
     }
 }
