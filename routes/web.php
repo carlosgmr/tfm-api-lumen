@@ -110,6 +110,10 @@ $router->get('user/{id:[1-9][0-9]*}/group/questionary', [
     'as' => 'user.listing.questionnairesMade',
     'uses' => 'UserController@questionnairesMade'
 ]);
+$router->get('user/{idUser:[1-9][0-9]*}/questionary/{idQuestionary:[1-9][0-9]*}', [
+    'as' => 'user.read.questionaryDetails',
+    'uses' => 'UserController@questionaryDetails'
+]);
 
 // GROUP
 $router->get('group', [

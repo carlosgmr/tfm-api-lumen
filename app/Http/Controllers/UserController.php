@@ -96,6 +96,7 @@ class UserController extends ApiController
                 }
                 break;
             case 'user.listing.questionnairesMade':
+            case 'user.read.questionaryDetails':
                 if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR, self::ROLE_INSTRUCTOR, self::ROLE_USER])) {
                     return false;
                 }
@@ -214,5 +215,139 @@ class UserController extends ApiController
         }
         
         return response()->json($results, 200);
+    }
+
+    /**
+     * 
+     * @param Request $request
+     * @param int $idUser
+     * @param int $idQuestionary
+     * @return JsonResponse
+     */
+    public function questionaryDetails(Request $request, $idUser, $idQuestionary)
+    {
+        if (!$this->checkAcl($request, $idUser)) {
+            return $this->unauthorized();
+        }
+
+        $result = [];
+
+        //datos user
+        $queryUser = 'SELECT `id`, `name`, `surname_1`, `surname_2` '.
+                'FROM `user` '.
+                'WHERE `id` = ?';
+        $user = $this->getDb()->selectOne($queryUser, [$idUser]);
+
+        if (!$user) {
+            return response()->json(['error' => ['El recurso solicitado no existe']], 404);
+        }
+        $result['user'] = $user;
+
+        //datos questionary
+        $queryQuestionary = 'SELECT '.
+                'q.`id` AS `questionary_id`,'.
+                'q.`title` AS `questionary_title`,'.
+                'q.`description` AS `questionary_description`,'.
+                'g.`id` AS `group_id`,'.
+                'g.`name` AS `group_name`,'.
+                'qm.`id` AS `questionary_model_id`,'.
+                'qm.`name` AS `questionary_model_name` '.
+            'FROM '.
+                '`questionary` AS q '.
+                'INNER JOIN `questionary_model` AS qm ON q.`model` = qm.`id` '.
+                'INNER JOIN `group` AS g ON q.`group` = g.`id` '.
+            'WHERE q.`id` = ?';
+        $questionary = $this->getDb()->selectOne($queryQuestionary, [$idQuestionary]);
+
+        if (!$questionary) {
+            return response()->json(['error' => ['El recurso solicitado no existe']], 404);
+        }
+        $result['questionary'] = [
+            'id' => $questionary->questionary_id,
+            'title' => $questionary->questionary_title,
+            'description' => $questionary->questionary_description,
+            'group' => [
+                'id' => $questionary->group_id,
+                'name' => $questionary->group_name,
+            ],
+            'model' => [
+                'id' => $questionary->questionary_model_id,
+                'name' => $questionary->questionary_model_name,
+            ],
+        ];
+
+        //user made questionary?
+        $queryMade = 'SELECT MAX(`created_at`) AS `last_date` FROM `registry` WHERE `user` = ? AND `questionary` = ?';
+        $made = $this->getDb()->selectOne($queryMade, [$idUser, $idQuestionary]);
+        $result['last_date'] = $made->last_date;
+        if (!$result['last_date']) {
+            return response()->json($result, 200);
+        }
+
+        //questions
+        $result['questions'] = [];
+        $queryQuestions = 'SELECT '.
+                'q.`id` AS `question_id`,'.
+                'q.`statement` AS `question_statement`,'.
+                'qm.`id` AS `question_model_id`,'.
+                'qm.`name` AS `question_model_name`,'.
+                'q.`active` AS `question_active` '.
+            'FROM '.
+                '`question` AS q '.
+                'INNER JOIN `question_model` AS qm ON q.`model` = qm.`id` '.
+            'WHERE '.
+                'q.`questionary` = ? '.
+            'ORDER BY '.
+                'q.`sort`';
+        $questions = $this->getDb()->select($queryQuestions, [$idQuestionary]);
+        $indexQuestions = [];
+
+        foreach ($questions as $index => $question) {
+            $indexQuestions[$question->question_id] = $index;
+            $result['questions'][] = [
+                'id' => $question->question_id,
+                'statement' => $question->question_statement,
+                'model' => [
+                    'id' => $question->question_model_id,
+                    'name' => $question->question_model_name,
+                ],
+                'active' => $question->question_active,
+                'answers' => [],
+                'registry' => null,
+            ];
+        }
+
+        //answers
+        $queryAnswers = 'SELECT `id`,`question`,`statement`,`correct` '.
+                'FROM `answer` '.
+                'WHERE `question` IN (SELECT `id` FROM `question` WHERE `questionary` = ?) '.
+                'ORDER BY `question`, `id`';
+        $answers = $this->getDb()->select($queryAnswers, [$idQuestionary]);
+
+        foreach ($answers as $answer) {
+            $index = $indexQuestions[$answer->question];
+            $result['questions'][$index]['answers'][] = [
+                'id' => $answer->id,
+                'statement' => $answer->statement,
+                'correct' => $answer->correct,
+            ];
+        }
+
+        //registries
+        $queryRegistries = 'SELECT `id`,`question`,`answer`,`created_at` '.
+                'FROM `registry` '.
+                'WHERE `user` = ? AND `questionary` = ?';
+        $registries = $this->getDb()->select($queryRegistries, [$idUser, $idQuestionary]);
+
+        foreach ($registries as $registry) {
+            $index = $indexQuestions[$registry->question];
+            $result['questions'][$index]['registry'] = [
+                'id' => $registry->id,
+                'answer' => $registry->answer,
+                'created_at' => $registry->created_at,
+            ];
+        }
+
+        return response()->json($result, 200);
     }
 }
