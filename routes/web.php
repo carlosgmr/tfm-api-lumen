@@ -110,9 +110,17 @@ $router->get('user/{id:[1-9][0-9]*}/group/questionary', [
     'as' => 'user.listing.questionnairesMade',
     'uses' => 'UserController@questionnairesMade'
 ]);
+$router->get('user/{id:[1-9][0-9]*}/questionary/by-state', [
+    'as' => 'user.listing.questionnairesByState',
+    'uses' => 'UserController@questionnairesByState'
+]);
 $router->get('user/{idUser:[1-9][0-9]*}/questionary/{idQuestionary:[1-9][0-9]*}', [
     'as' => 'user.read.questionaryDetails',
     'uses' => 'UserController@questionaryDetails'
+]);
+$router->get('user/{idUser:[1-9][0-9]*}/group/{idGroup:[1-9][0-9]*}/questionary/by-state', [
+    'as' => 'user.listing.questionnairesByGroupAndState',
+    'uses' => 'UserController@questionnairesByGroupAndState'
 ]);
 
 // GROUP
@@ -221,6 +229,10 @@ $router->delete('questionary/{id:[1-9][0-9]*}', [
 $router->get('questionary/{id:[1-9][0-9]*}/complete', [
     'as' => 'questionary.readComplete',
     'uses' => 'QuestionaryController@readComplete'
+]);
+$router->get('questionary/{id:[1-9][0-9]*}/basic', [
+    'as' => 'questionary.readBasic',
+    'uses' => 'QuestionaryController@readBasic'
 ]);
 $router->post('questionary/{id:[1-9][0-9]*}/add-questions', [
     'as' => 'questionary.addQuestions',

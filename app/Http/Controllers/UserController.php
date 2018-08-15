@@ -97,6 +97,8 @@ class UserController extends ApiController
                 break;
             case 'user.listing.questionnairesMade':
             case 'user.read.questionaryDetails':
+            case 'user.listing.questionnairesByGroupAndState':
+            case 'user.listing.questionnairesByState':
                 if (!in_array($request->appUser->role, [self::ROLE_ADMINISTRATOR, self::ROLE_INSTRUCTOR, self::ROLE_USER])) {
                     return false;
                 }
@@ -349,5 +351,135 @@ class UserController extends ApiController
         }
 
         return response()->json($result, 200);
+    }
+
+    /**
+     * 
+     * @param Request $request
+     * @param int $idUser
+     * @param int $idGroup
+     * @return JsonResponse
+     */
+    public function questionnairesByGroupAndState(Request $request, $idUser, $idGroup)
+    {
+        if (!$this->checkAcl($request, $idUser)) {
+            return $this->unauthorized();
+        }
+
+        $result = [];
+
+        $queryDone = 'SELECT q.* '.
+            'FROM '.
+                '`registry` AS r '.
+                'INNER JOIN `questionary` AS q ON r.`questionary` = q.`id` '.
+            'WHERE '.
+                'r.`user` = ? AND q.`group` = ? '.
+            'GROUP BY '.
+                'q.`id` '.
+            'ORDER BY '.
+                'q.`id`';
+        $result['done'] = $this->getDb()->select($queryDone, [$idUser, $idGroup]);
+
+        $queryNotDone = 'SELECT * '.
+            'FROM `questionary` '.
+            'WHERE '.
+                '`group` = ? AND '.
+                '`active` = ? AND '.
+                '`id` NOT IN (SELECT distinct(`questionary`) FROM `registry` WHERE `user` = ?) '.
+            'ORDER BY `id`';
+        $result['not_done'] = $this->getDb()->select($queryNotDone, [$idGroup, 1, $idUser]);
+
+        return response()->json($result, 200);
+    }
+
+    /**
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function questionnairesByState(Request $request, $id)
+    {
+        if (!$this->checkAcl($request, $id)) {
+            return $this->unauthorized();
+        }
+
+        $result = [];
+
+        $queryDone = 'SELECT '.
+                'q.`id` AS `questionary_id`,'.
+                'g.`id` AS `group_id`,'.
+                'g.`name` AS `group_name`,'.
+                'q.`title` AS `questionary_title`,'.
+                'q.`description` AS `questionary_description`,'.
+                'q.`model` AS `questionary_model`,'.
+                'q.`created_at` AS `questionary_created_at`,'.
+                'q.`updated_at` AS `questionary_updated_at`,'.
+                'q.`public` AS `questionary_public`,'.
+                'q.`active` AS `questionary_active` '.
+            'FROM '.
+                '`registry` AS r '.
+                'INNER JOIN `questionary` AS q ON r.`questionary` = q.`id` '.
+                'INNER JOIN `group` AS g ON q.`group` = g.`id` '.
+            'WHERE '.
+                'r.`user` = ? AND '.
+                'q.`group` IN (SELECT distinct(`group`) FROM `user_group` WHERE `user` = ?) '.
+            'GROUP BY '.
+                'q.`id` '.
+            'ORDER BY '.
+                'q.`id`';
+        $result['done'] = $this->formatQuestionnairesByState($this->getDb()->select($queryDone, [$id, $id]));
+
+        $queryNotDone = 'SELECT '.
+                'q.`id` AS `questionary_id`,'.
+                'g.`id` AS `group_id`,'.
+                'g.`name` AS `group_name`,'.
+                'q.`title` AS `questionary_title`,'.
+                'q.`description` AS `questionary_description`,'.
+                'q.`model` AS `questionary_model`,'.
+                'q.`created_at` AS `questionary_created_at`,'.
+                'q.`updated_at` AS `questionary_updated_at`,'.
+                'q.`public` AS `questionary_public`,'.
+                'q.`active` AS `questionary_active` '.
+            'FROM '.
+                '`questionary` AS q '.
+                'INNER JOIN `group` AS g ON q.`group` = g.`id` '.
+            'WHERE '.
+                'q.`active` = ? AND '.
+                'q.`group` IN (SELECT distinct(`group`) FROM `user_group` WHERE `user` = ?) AND '.
+                'q.`id` NOT IN (SELECT distinct(`questionary`) FROM `registry` WHERE `user` = ?) '.
+            'ORDER BY '.
+                'q.`id`';
+        $result['not_done'] = $this->formatQuestionnairesByState($this->getDb()->select($queryNotDone, [1, $id, $id]));
+
+        return response()->json($result, 200);
+    }
+
+    /**
+     * 
+     * @param array $items
+     * @return array
+     */
+    private function formatQuestionnairesByState(array $items)
+    {
+        $result = [];
+        foreach ($items as $item) {
+            $result[] = [
+                'id' => $item->questionary_id,
+                'group' => [
+                    'id' => $item->group_id,
+                    'name' => $item->group_name,
+                ],
+                'title' => $item->questionary_title,
+                'description' => $item->questionary_description,
+                'model' => $item->questionary_model,
+                'created_at' => $item->questionary_created_at,
+                'updated_at' => $item->questionary_updated_at,
+                'public' => $item->questionary_public,
+                'active' => $item->questionary_active,
+            ];
+        }
+
+        return $result;
     }
 }
