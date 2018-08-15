@@ -185,7 +185,15 @@ class QuestionaryController extends ApiController
             return $this->unauthorized();
         }
 
-        $result = [];
+        // validación si existen questions creadas
+        $queryNumQuestions = 'SELECT COUNT(*) AS `num_questions` FROM `question` WHERE `questionary` = ?';
+        $resultNumQuestions = $this->getDb()->selectOne($queryNumQuestions, [$id]);
+
+        if ($resultNumQuestions->num_questions > 0) {
+            return response()->json(['questions' => ['El examen/encuesta ya tiene preguntas creadas. No se pueden añadir más']], 422);
+        }
+
+        // validaciones formato
         $data = $this->validate($request, [
             'questions' => 'required|array|min:1'
         ]);
@@ -196,7 +204,55 @@ class QuestionaryController extends ApiController
             return response()->json(['questions' => $errors], 422);
         }
 
-        return response()->json($result, 201);
+        // creamos inserts e iniciamos transacción
+        $insertQuestion = 'INSERT INTO `question` '.
+                '(`questionary`,`statement`,`sort`,`model`,`active`) '.
+                'VALUES (?, ?, ?, ?, ?)';
+        $insertAnswers = 'INSERT INTO `answer` '.
+                '(`question`,`statement`,`correct`) '.
+                'VALUES ';
+
+        $this->getDb()->beginTransaction();
+        try {
+            foreach ($questions as $i => $q) {
+                // insertamos question
+                $insertQuestionOk = $this->getDb()->insert(
+                    $insertQuestion,
+                    [$id, $q['statement'], $q['sort'], $q['model'], 1]
+                );
+
+                if (!$insertQuestionOk) {
+                    throw new \Exception('No se ha podido guardar la pregunta #'.($i+1));
+                }
+
+                $idQuestion = $this->getDb()->getPdo()->lastInsertId();
+
+                // insertamos answers
+                $insertAnswers2 = '';
+                $insertAnswersValues = [];
+
+                foreach ($q['answers'] as $j => $a) {
+                    $insertAnswers2 .= ($insertAnswers2 !== '' ? ',' : '').'(?,?,?)';
+                    array_push($insertAnswersValues, $idQuestion, $a['statement'], $a['correct']);
+                }
+
+                $insertAnswersOk = $this->getDb()->insert(
+                    $insertAnswers.$insertAnswers2,
+                    $insertAnswersValues
+                );
+
+                if (!$insertAnswersOk) {
+                    throw new \Exception('No se han podido guardar las respuestas de la pregunta #'.($i+1));
+                }
+            }
+
+            $this->getDb()->commit();
+        } catch (\Exception $ex) {
+            $this->getDb()->rollBack();
+            return response()->json(['error' => [$ex->getMessage()]], 500);
+        }
+
+        return response()->json($data, 201);
     }
 
     private function validateQuestions(array $questions)
@@ -204,6 +260,11 @@ class QuestionaryController extends ApiController
         $errors = [];
 
         foreach ($questions as $i => $q) {
+            if (!is_array($q)) {
+                $errors[] = 'Error en pregunta #'.($i+1).': la pregunta debe ser un objeto';
+                continue;
+            }
+
             if (!isset($q['statement']) || (isset($q['statement']) && empty($q['statement']))) {
                 $errors[] = 'Error en pregunta #'.($i+1).': el enunciado es obligatorio';
             }
@@ -221,7 +282,7 @@ class QuestionaryController extends ApiController
             }
 
             if (isset($q['answers']) && is_array($q['answers'])) {
-                if (count($q['answers']) === 0) {
+                if (count($q['answers']) < 2) {
                     $errors[] = 'Error en pregunta #'.($i+1).': debe indicar como mínimo 2 respuestas';
                 }
 
@@ -231,6 +292,11 @@ class QuestionaryController extends ApiController
 
                 $numCorrectAnswers = 0;
                 foreach ($q['answers'] as $j => $a) {
+                    if (!is_array($a)) {
+                        $errors[] = 'Error en pregunta #'.($i+1).', respuesta #'.($j+1).': la respuesta debe ser un objeto';
+                        continue;
+                    }
+
                     if (!isset($a['statement']) || (isset($a['statement']) && empty($a['statement']))) {
                         $errors[] = 'Error en pregunta #'.($i+1).', respuesta #'.($j+1).': el texto es obligatorio';
                     }
