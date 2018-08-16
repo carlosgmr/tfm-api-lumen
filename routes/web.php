@@ -304,3 +304,7 @@ $router->delete('registry/{id:[1-9][0-9]*}', [
     'as' => 'registry.delete',
     'uses' => 'RegistryController@delete'
 ]);
+$router->post('registry/user/{id:[1-9][0-9]*}/questionary/{idQuestionary:[1-9][0-9]*}', [
+    'as' => 'registry.saveAttempt',
+    'uses' => 'RegistryController@saveAttempt'
+]);
