@@ -56,9 +56,16 @@ class UserController extends ApiController
     public function formatData($data)
     {
         if (isset($data['password']) && $data['password'] !== null && $data['password'] !== '') {
-            /* @var $hashManager \Illuminate\Hashing\HashManager */
-            $hashManager = app('hash');
-            $data['password'] = $hashManager->make($data['password'], ['rounds' => 10]);
+            switch (env('PASSWORD_ALGO')) {
+                case 'bcrypt':
+                    /* @var $hashManager \Illuminate\Hashing\HashManager */
+                    $hashManager = app('hash');
+                    $data['password'] = $hashManager->make($data['password'], ['rounds' => 10]);
+                    break;
+                case 'sha1':
+                    $data['password'] = sha1($data['password']);
+                    break;
+            }
         }
 
         return $data;

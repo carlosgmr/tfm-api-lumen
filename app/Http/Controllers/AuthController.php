@@ -42,10 +42,19 @@ class AuthController extends ApiController
             return response()->json(['error' => ['Tu cuenta se encuentra deshabilitada']], 400);
         }
 
-        /* @var $hashManager \Illuminate\Hashing\HashManager */
-        $hashManager = app('hash');
-        if (!$hashManager->check($data['password'], $appUser->password)) {
-            return response()->json(['error' => ['Las credenciales no son válidas']], 400);
+        switch (env('PASSWORD_ALGO')) {
+            case 'bcrypt':
+                /* @var $hashManager \Illuminate\Hashing\HashManager */
+                $hashManager = app('hash');
+                if (!$hashManager->check($data['password'], $appUser->password)) {
+                    return response()->json(['error' => ['Las credenciales no son válidas']], 400);
+                }
+                break;
+            case 'sha1':
+                if (sha1($data['password']) !== $appUser->password) {
+                    return response()->json(['error' => ['Las credenciales no son válidas']], 400);
+                }
+                break;
         }
 
         // datos usuario
